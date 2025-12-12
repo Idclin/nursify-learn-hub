@@ -1,4 +1,4 @@
-import { Content } from '@/types';
+import { Content } from '@/contexts/ContentContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LevelBadge } from '@/components/LevelBadge';
 import { FileText, Video, Music, Image, Calendar, Megaphone, Download, Heart } from 'lucide-react';
@@ -27,10 +27,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => 
 
   return (
     <Card className="group cursor-pointer overflow-hidden" onClick={onView}>
-      {content.type === 'video' && content.thumbnailUrl && (
+      {content.type === 'video' && content.thumbnail_url && (
         <div className="relative h-36 overflow-hidden">
           <img
-            src={content.thumbnailUrl}
+            src={content.thumbnail_url}
             alt={content.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
@@ -43,10 +43,10 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => 
         </div>
       )}
       
-      {content.type === 'image' && content.fileUrl && (
+      {content.type === 'image' && content.file_url && (
         <div className="relative h-36 overflow-hidden">
           <img
-            src={content.fileUrl}
+            src={content.file_url}
             alt={content.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
@@ -55,7 +55,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => 
 
       <CardHeader className={cn(
         'pb-2',
-        (content.type === 'video' || content.type === 'image') && content.thumbnailUrl ? 'pt-3' : ''
+        (content.type === 'video' || content.type === 'image') && (content.thumbnail_url || content.file_url) ? 'pt-3' : ''
       )}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3">
@@ -69,11 +69,11 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => 
                 {content.title}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                {formatDistanceToNow(content.createdAt, { addSuffix: true })}
+                {formatDistanceToNow(new Date(content.created_at), { addSuffix: true })}
               </p>
             </div>
           </div>
-          <LevelBadge level={content.targetLevel} />
+          <LevelBadge level={content.target_level} />
         </div>
       </CardHeader>
 
@@ -85,8 +85,16 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => 
         )}
         
         <div className="flex items-center gap-2">
-          {content.type === 'pdf' && (
-            <Button variant="outline" size="sm" className="flex-1" onClick={(e) => e.stopPropagation()}>
+          {content.type === 'pdf' && content.file_url && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1" 
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(content.file_url!, '_blank');
+              }}
+            >
               <Download className="w-4 h-4 mr-1" />
               Download
             </Button>

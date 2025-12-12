@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ContentProvider } from '@/contexts/ContentContext';
 import { AuthScreen } from '@/components/AuthScreen';
@@ -6,21 +6,33 @@ import { StudentHome } from '@/components/StudentHome';
 import { TeacherDashboard } from '@/components/TeacherDashboard';
 import { ContentList } from '@/components/ContentList';
 import { BottomNav } from '@/components/BottomNav';
-import { Settings, Bell, LogOut, User, Moon, Sun, Shield, HelpCircle } from 'lucide-react';
+import { Settings, Bell, LogOut, User, Moon, Shield, HelpCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
 
 const MainApp: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, isLoading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
 
-  if (!user) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
     return <AuthScreen />;
   }
 
   // Teacher view
-  if (user.role === 'teacher') {
+  if (profile.role === 'teacher') {
     return (
       <>
         {activeTab === 'home' && <TeacherDashboard />}
@@ -46,11 +58,25 @@ const MainApp: React.FC = () => {
 };
 
 const NotificationsScreen: React.FC = () => {
-  const notifications = [
-    { id: 1, title: 'New video uploaded', message: 'Patient Assessment Techniques is now available', time: '2 min ago', unread: true },
-    { id: 2, title: 'Study plan updated', message: 'Week 12 study plan has been posted', time: '1 hour ago', unread: true },
-    { id: 3, title: 'Announcement', message: 'Clinical rotations schedule updated', time: '3 hours ago', unread: false },
-  ];
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!error && data) {
+        setNotifications(data);
+      }
+      setIsLoading(false);
+    };
+
+    fetchNotifications();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -67,27 +93,37 @@ const NotificationsScreen: React.FC = () => {
       </header>
 
       <div className="p-4 space-y-3">
-        {notifications.map(notif => (
-          <Card key={notif.id} className={notif.unread ? 'border-primary/30 bg-primary/5' : ''}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-2 ${notif.unread ? 'bg-primary' : 'bg-muted'}`} />
-                <div className="flex-1">
-                  <p className="font-medium">{notif.title}</p>
-                  <p className="text-sm text-muted-foreground">{notif.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : notifications.length > 0 ? (
+          notifications.map(notif => (
+            <Card key={notif.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full mt-2 bg-primary" />
+                  <div className="flex-1">
+                    <p className="font-medium">{notif.title}</p>
+                    <p className="text-sm text-muted-foreground">{notif.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(notif.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <p className="text-center text-muted-foreground py-12">No notifications yet.</p>
+        )}
       </div>
     </div>
   );
 };
 
 const SettingsScreen: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { profile, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -112,9 +148,9 @@ const SettingsScreen: React.FC = () => {
                 <User className="w-7 h-7 text-primary-foreground" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold">{user?.fullName}</p>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-                <p className="text-xs text-primary mt-1 capitalize">{user?.role}</p>
+                <p className="font-semibold">{profile?.full_name}</p>
+                <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                <p className="text-xs text-primary mt-1 capitalize">{profile?.role}</p>
               </div>
             </div>
           </CardContent>

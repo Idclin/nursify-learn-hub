@@ -3,12 +3,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Stethoscope, Mail, Lock, User, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
-import { UserRole, StudentLevel } from '@/types';
+import { Stethoscope, Mail, Lock, User, ChevronRight, GraduationCap, BookOpen, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 type AuthMode = 'login' | 'register' | 'role-select' | 'level-select';
+type UserRole = 'student' | 'teacher';
+type StudentLevel = '100' | '200' | '300';
+
+const emailSchema = z.string().email('Invalid email address');
+const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
+const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
 
 export const AuthScreen: React.FC = () => {
   const { login, register, isLoading } = useAuth();
@@ -17,18 +23,40 @@ export const AuthScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<StudentLevel | null>(null);
+  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string; name?: string } = {};
+    
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      newErrors.email = emailResult.error.errors[0].message;
+    }
+
+    const passwordResult = passwordSchema.safeParse(password);
+    if (!passwordResult.success) {
+      newErrors.password = passwordResult.error.errors[0].message;
+    }
+
+    if (mode === 'register' || mode === 'role-select' || mode === 'level-select') {
+      const nameResult = nameSchema.safeParse(fullName);
+      if (!nameResult.success) {
+        newErrors.name = nameResult.error.errors[0].message;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+    if (!validateForm()) return;
+    
     try {
       await login(email, password);
       toast.success('Welcome back!');
-    } catch (error) {
-      toast.error('Invalid credentials. Try student@nursing.edu or teacher@nursing.edu');
+    } catch (error: any) {
+      toast.error(error.message || 'Login failed');
     }
   };
 
@@ -42,32 +70,24 @@ export const AuthScreen: React.FC = () => {
   };
 
   const handleLevelSelect = (level: StudentLevel) => {
-    setSelectedLevel(level);
     handleRegister('student', level);
   };
 
   const handleRegister = async (role: UserRole, level?: StudentLevel) => {
-    if (!email || !password || !fullName) {
-      toast.error('Please fill in all fields');
-      return;
-    }
     try {
       await register(email, password, fullName, role, level);
       toast.success('Account created successfully!');
-    } catch (error) {
-      toast.error('Registration failed. Please try again.');
+    } catch (error: any) {
+      if (error.message?.includes('already registered')) {
+        toast.error('This email is already registered. Please log in instead.');
+      } else {
+        toast.error(error.message || 'Registration failed');
+      }
     }
-  };
-
-  const goToRegister = () => {
-    setMode('register');
   };
 
   const goToRoleSelect = () => {
-    if (!email || !password || !fullName) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+    if (!validateForm()) return;
     setMode('role-select');
   };
 
@@ -103,25 +123,31 @@ export const AuthScreen: React.FC = () => {
           <CardContent className="space-y-4">
             {mode === 'login' && (
               <>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      className="pl-10"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="Password"
+                      className="pl-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
 
                 <Button
@@ -130,69 +156,68 @@ export const AuthScreen: React.FC = () => {
                   onClick={handleLogin}
                   disabled={isLoading}
                 >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : null}
                   {isLoading ? 'Signing in...' : 'Sign In'}
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  {!isLoading && <ChevronRight className="w-4 h-4 ml-1" />}
                 </Button>
 
                 <div className="text-center">
-                  <Button variant="link" onClick={goToRegister}>
+                  <Button variant="link" onClick={() => setMode('register')}>
                     Don't have an account? Sign up
                   </Button>
-                </div>
-
-                <div className="border-t pt-4 mt-4">
-                  <p className="text-xs text-center text-muted-foreground mb-3">Demo credentials:</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-muted/50 rounded-lg p-2 text-center">
-                      <p className="font-medium">Student</p>
-                      <p className="text-muted-foreground">student@nursing.edu</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-2 text-center">
-                      <p className="font-medium">Teacher</p>
-                      <p className="text-muted-foreground">teacher@nursing.edu</p>
-                    </div>
-                  </div>
                 </div>
               </>
             )}
 
             {mode === 'register' && (
               <>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Full name"
-                    className="pl-10"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                  />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Full name"
+                      className="pl-10"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                  </div>
+                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                 </div>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      className="pl-10"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="Password (min 6 characters)"
+                      className="pl-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
 
                 <Button
                   variant="gradient"
                   className="w-full"
                   onClick={goToRoleSelect}
+                  disabled={isLoading}
                 >
                   Continue
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -210,7 +235,8 @@ export const AuthScreen: React.FC = () => {
               <div className="space-y-3">
                 <button
                   onClick={() => handleRoleSelect('student')}
-                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-4"
+                  disabled={isLoading}
+                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-4 disabled:opacity-50"
                 >
                   <div className="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center">
                     <GraduationCap className="w-6 h-6 text-info" />
@@ -224,7 +250,8 @@ export const AuthScreen: React.FC = () => {
 
                 <button
                   onClick={() => handleRoleSelect('teacher')}
-                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-4"
+                  disabled={isLoading}
+                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-4 disabled:opacity-50"
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                     <BookOpen className="w-6 h-6 text-primary" />
@@ -233,7 +260,11 @@ export const AuthScreen: React.FC = () => {
                     <p className="font-semibold">I'm a Teacher</p>
                     <p className="text-sm text-muted-foreground">Upload and manage content</p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  )}
                 </button>
 
                 <Button variant="ghost" className="w-full" onClick={() => setMode('register')}>
@@ -244,34 +275,39 @@ export const AuthScreen: React.FC = () => {
 
             {mode === 'level-select' && (
               <div className="space-y-3">
-                {[100, 200, 300].map((level) => (
+                {(['100', '200', '300'] as const).map((level) => (
                   <button
                     key={level}
-                    onClick={() => handleLevelSelect(level as StudentLevel)}
+                    onClick={() => handleLevelSelect(level)}
+                    disabled={isLoading}
                     className={cn(
-                      'w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between',
+                      'w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between disabled:opacity-50',
                       'border-border hover:border-primary hover:bg-primary/5'
                     )}
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         'w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg',
-                        level === 100 && 'bg-info/10 text-info',
-                        level === 200 && 'bg-purple-500/10 text-purple-600',
-                        level === 300 && 'bg-primary/10 text-primary'
+                        level === '100' && 'bg-info/10 text-info',
+                        level === '200' && 'bg-purple-500/10 text-purple-600',
+                        level === '300' && 'bg-primary/10 text-primary'
                       )}>
                         {level}
                       </div>
                       <div className="text-left">
                         <p className="font-semibold">Level {level}</p>
                         <p className="text-sm text-muted-foreground">
-                          {level === 100 && 'First Year'}
-                          {level === 200 && 'Second Year'}
-                          {level === 300 && 'Third Year'}
+                          {level === '100' && 'First Year'}
+                          {level === '200' && 'Second Year'}
+                          {level === '300' && 'Third Year'}
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    )}
                   </button>
                 ))}
 

@@ -1,108 +1,175 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Content, ContentType, TargetLevel } from '@/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
+import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+
+type ContentRow = Database['public']['Tables']['content']['Row'];
+type ContentType = Database['public']['Enums']['content_type'];
+type TargetLevel = Database['public']['Enums']['target_level'];
+
+export interface Content {
+  id: string;
+  title: string;
+  description: string | null;
+  type: ContentType;
+  file_url: string | null;
+  text_content: string | null;
+  thumbnail_url: string | null;
+  target_level: TargetLevel;
+  created_by: string;
+  created_at: string;
+}
 
 interface ContentContextType {
   contents: Content[];
-  addContent: (content: Omit<Content, 'id' | 'createdAt'>) => void;
-  getContentByLevel: (level: number) => Content[];
-  getContentByType: (type: ContentType, level?: number) => Content[];
+  isLoading: boolean;
+  addContent: (content: {
+    title: string;
+    description?: string;
+    type: ContentType;
+    target_level: TargetLevel;
+    file_url?: string;
+    text_content?: string;
+    thumbnail_url?: string;
+  }) => Promise<void>;
+  uploadFile: (file: File, folder: string) => Promise<string | null>;
+  refreshContent: () => Promise<void>;
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined);
 
-// Mock content for demo
-const initialContent: Content[] = [
-  {
-    id: '1',
-    title: 'Introduction to Nursing Fundamentals',
-    description: 'Core concepts every nursing student should know',
-    type: 'pdf',
-    targetLevel: 100,
-    createdBy: '2',
-    createdAt: new Date(Date.now() - 86400000),
-    fileUrl: '/sample.pdf',
-  },
-  {
-    id: '2',
-    title: 'Patient Assessment Techniques',
-    description: 'Learn how to properly assess patients',
-    type: 'video',
-    targetLevel: 100,
-    createdBy: '2',
-    createdAt: new Date(Date.now() - 172800000),
-    fileUrl: 'https://example.com/video.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400',
-  },
-  {
-    id: '3',
-    title: 'Pharmacology Basics Audio Lesson',
-    description: 'Understanding medication administration',
-    type: 'audio',
-    targetLevel: 200,
-    createdBy: '2',
-    createdAt: new Date(Date.now() - 259200000),
-    fileUrl: '/sample.mp3',
-  },
-  {
-    id: '4',
-    title: 'Weekly Study Plan - Week 12',
-    description: 'Focus areas and assignments for this week',
-    type: 'study_plan',
-    targetLevel: 'all',
-    createdBy: '2',
-    createdAt: new Date(),
-    textContent: '## Week 12 Study Plan\n\n- Complete Chapter 15 readings\n- Practice vital signs assessment\n- Review medication calculations',
-  },
-  {
-    id: '5',
-    title: 'Clinical Rotation Schedule Update',
-    description: 'Important changes to the clinical schedule',
-    type: 'announcement',
-    targetLevel: 300,
-    createdBy: '2',
-    createdAt: new Date(),
-    textContent: 'Clinical rotations for 300-level students will begin next Monday. Please ensure all documentation is complete.',
-  },
-  {
-    id: '6',
-    title: 'Anatomy Reference Chart',
-    description: 'Visual guide to human anatomy',
-    type: 'image',
-    targetLevel: 100,
-    createdBy: '2',
-    createdAt: new Date(Date.now() - 345600000),
-    fileUrl: 'https://images.unsplash.com/photo-1530026186672-2cd00ffc50fe?w=600',
-  },
-];
-
 export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [contents, setContents] = useState<Content[]>(initialContent);
+  const [contents, setContents] = useState<Content[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, profile } = useAuth();
 
-  const addContent = (content: Omit<Content, 'id' | 'createdAt'>) => {
-    const newContent: Content = {
-      ...content,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    setContents(prev => [newContent, ...prev]);
+  const fetchContent = async () => {
+    if (!user) {
+      setContents([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('content')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching content:', error);
+        toast.error('Failed to load content');
+      } else {
+        setContents(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchContent:', error);
+    }
+    setIsLoading(false);
   };
 
-  const getContentByLevel = (level: number) => {
-    return contents.filter(
-      c => c.targetLevel === level || c.targetLevel === 'all'
-    );
+  useEffect(() => {
+    if (user) {
+      fetchContent();
+    } else {
+      setContents([]);
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('content-files')
+        .upload(fileName, file);
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error('Failed to upload file');
+        return null;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('content-files')
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload file');
+      return null;
+    }
   };
 
-  const getContentByType = (type: ContentType, level?: number) => {
-    return contents.filter(c => {
-      const typeMatch = c.type === type;
-      const levelMatch = level ? (c.targetLevel === level || c.targetLevel === 'all') : true;
-      return typeMatch && levelMatch;
-    });
+  const addContent = async (content: {
+    title: string;
+    description?: string;
+    type: ContentType;
+    target_level: TargetLevel;
+    file_url?: string;
+    text_content?: string;
+    thumbnail_url?: string;
+  }) => {
+    if (!user) {
+      toast.error('You must be logged in');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('content')
+        .insert({
+          title: content.title,
+          description: content.description || null,
+          type: content.type,
+          target_level: content.target_level,
+          file_url: content.file_url || null,
+          text_content: content.text_content || null,
+          thumbnail_url: content.thumbnail_url || null,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding content:', error);
+        toast.error('Failed to add content');
+        return;
+      }
+
+      // Create notification for students
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          title: `New ${content.type} uploaded`,
+          message: content.title,
+          content_id: data.id,
+          target_level: content.target_level,
+        });
+
+      if (notifError) {
+        console.error('Error creating notification:', notifError);
+      }
+
+      setContents(prev => [data, ...prev]);
+      toast.success('Content uploaded successfully!');
+    } catch (error) {
+      console.error('Error in addContent:', error);
+      toast.error('Failed to add content');
+    }
+  };
+
+  const refreshContent = async () => {
+    await fetchContent();
   };
 
   return (
-    <ContentContext.Provider value={{ contents, addContent, getContentByLevel, getContentByType }}>
+    <ContentContext.Provider value={{ contents, isLoading, addContent, uploadFile, refreshContent }}>
       {children}
     </ContentContext.Provider>
   );

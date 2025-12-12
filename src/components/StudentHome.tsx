@@ -1,18 +1,27 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useContent } from '@/contexts/ContentContext';
+import { useContent, Content } from '@/contexts/ContentContext';
 import { ContentCard } from '@/components/ContentCard';
 import { LevelBadge } from '@/components/LevelBadge';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export const StudentHome: React.FC = () => {
-  const { user } = useAuth();
-  const { getContentByLevel } = useContent();
+  const { profile } = useAuth();
+  const { contents, isLoading } = useContent();
   
-  const userLevel = user?.level || 100;
-  const content = getContentByLevel(userLevel);
-  const recentContent = content.slice(0, 6);
+  const userLevel = profile?.level || '100';
+  
+  // Filter content by user level
+  const filteredContent = contents.filter(
+    c => c.target_level === 'all' || c.target_level === userLevel
+  );
+  const recentContent = filteredContent.slice(0, 6);
+
+  // Count by type
+  const noteCount = filteredContent.filter(c => c.type === 'pdf' || c.type === 'text').length;
+  const videoCount = filteredContent.filter(c => c.type === 'video').length;
+  const audioCount = filteredContent.filter(c => c.type === 'audio').length;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -22,7 +31,7 @@ export const StudentHome: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-muted-foreground">Welcome back,</p>
-              <h1 className="text-xl font-semibold">{user?.fullName}</h1>
+              <h1 className="text-xl font-semibold">{profile?.full_name || 'Student'}</h1>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
@@ -53,21 +62,9 @@ export const StudentHome: React.FC = () => {
       {/* Quick Stats */}
       <section className="px-4 py-6">
         <div className="grid grid-cols-3 gap-3">
-          <QuickStatCard
-            label="Notes"
-            count={content.filter(c => c.type === 'pdf' || c.type === 'text').length}
-            color="bg-info/10 text-info"
-          />
-          <QuickStatCard
-            label="Videos"
-            count={content.filter(c => c.type === 'video').length}
-            color="bg-purple-500/10 text-purple-600"
-          />
-          <QuickStatCard
-            label="Audio"
-            count={content.filter(c => c.type === 'audio').length}
-            color="bg-success/10 text-success"
-          />
+          <QuickStatCard label="Notes" count={noteCount} color="bg-info/10 text-info" />
+          <QuickStatCard label="Videos" count={videoCount} color="bg-purple-500/10 text-purple-600" />
+          <QuickStatCard label="Audio" count={audioCount} color="bg-success/10 text-success" />
         </div>
       </section>
 
@@ -78,15 +75,22 @@ export const StudentHome: React.FC = () => {
           <Button variant="link" className="text-sm p-0 h-auto">View all</Button>
         </div>
 
-        <div className="grid gap-4">
-          {recentContent.map(item => (
-            <ContentCard key={item.id} content={item} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {recentContent.map(item => (
+              <ContentCard key={item.id} content={item} />
+            ))}
+          </div>
+        )}
 
-        {recentContent.length === 0 && (
+        {!isLoading && recentContent.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No content available for your level yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">Check back soon for updates!</p>
           </div>
         )}
       </section>

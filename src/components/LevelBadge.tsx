@@ -1,19 +1,20 @@
-import { TargetLevel } from '@/types';
 import { cn } from '@/lib/utils';
 
+type TargetLevel = '100' | '200' | '300' | 'all';
+
 interface LevelBadgeProps {
-  level: TargetLevel;
+  level: TargetLevel | string;
   className?: string;
 }
 
 export const LevelBadge: React.FC<LevelBadgeProps> = ({ level, className }) => {
   const getLevelStyles = () => {
     switch (level) {
-      case 100:
+      case '100':
         return 'bg-info/10 text-info border-info/20';
-      case 200:
+      case '200':
         return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
-      case 300:
+      case '300':
         return 'bg-primary/10 text-primary border-primary/20';
       case 'all':
         return 'bg-warning/10 text-warning border-warning/20';

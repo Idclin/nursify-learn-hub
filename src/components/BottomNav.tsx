@@ -23,8 +23,8 @@ const teacherTabs = [
 ];
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
-  const { user } = useAuth();
-  const tabs = user?.role === 'teacher' ? teacherTabs : studentTabs;
+  const { profile } = useAuth();
+  const tabs = profile?.role === 'teacher' ? teacherTabs : studentTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border safe-bottom z-50">

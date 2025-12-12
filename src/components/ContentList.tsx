@@ -1,8 +1,10 @@
-import { useContent } from '@/contexts/ContentContext';
+import { useContent, Content } from '@/contexts/ContentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ContentCard } from '@/components/ContentCard';
-import { ContentType } from '@/types';
-import { FileText, Video, Music, Megaphone, Calendar, Image } from 'lucide-react';
+import { FileText, Video, Music, Megaphone, Calendar, Image, Loader2 } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type ContentType = Database['public']['Enums']['content_type'];
 
 interface ContentListProps {
   type: ContentType | ContentType[];
@@ -20,13 +22,18 @@ const typeIcons: Record<ContentType, React.ElementType> = {
 };
 
 export const ContentList: React.FC<ContentListProps> = ({ type, title }) => {
-  const { user } = useAuth();
-  const { getContentByType, getContentByLevel } = useContent();
+  const { profile } = useAuth();
+  const { contents, isLoading } = useContent();
   
-  const userLevel = user?.level || 100;
+  const userLevel = profile?.level || '100';
   const types = Array.isArray(type) ? type : [type];
   
-  const content = getContentByLevel(userLevel).filter(c => types.includes(c.type));
+  // Filter content by user level and type
+  const content = contents.filter(c => {
+    const typeMatch = types.includes(c.type);
+    const levelMatch = c.target_level === 'all' || c.target_level === userLevel;
+    return typeMatch && levelMatch;
+  });
 
   const Icon = typeIcons[types[0]];
 
@@ -45,16 +52,24 @@ export const ContentList: React.FC<ContentListProps> = ({ type, title }) => {
       </header>
 
       <div className="p-4 space-y-4">
-        {content.map(item => (
-          <ContentCard key={item.id} content={item} />
-        ))}
-
-        {content.length === 0 && (
-          <div className="text-center py-16">
-            <Icon className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">No {title.toLowerCase()} available yet.</p>
-            <p className="text-sm text-muted-foreground mt-1">Check back soon for updates!</p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : (
+          <>
+            {content.map(item => (
+              <ContentCard key={item.id} content={item} />
+            ))}
+
+            {content.length === 0 && (
+              <div className="text-center py-16">
+                <Icon className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">No {title.toLowerCase()} available yet.</p>
+                <p className="text-sm text-muted-foreground mt-1">Check back soon for updates!</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

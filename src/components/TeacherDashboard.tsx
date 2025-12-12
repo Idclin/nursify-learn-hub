@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContent } from '@/contexts/ContentContext';
 import { ContentCard } from '@/components/ContentCard';
@@ -8,9 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Upload, FileText, Video, Music, Image, Calendar, Megaphone, 
-  Plus, Users, Bell, Settings, LogOut, ChevronDown 
+  Plus, LogOut, Loader2, X
 } from 'lucide-react';
-import { ContentType, TargetLevel } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -20,6 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Database } from '@/integrations/supabase/types';
+
+type ContentType = Database['public']['Enums']['content_type'];
+type TargetLevel = Database['public']['Enums']['target_level'];
 
 const contentTypes: { id: ContentType; label: string; icon: React.ElementType }[] = [
   { id: 'pdf', label: 'PDF Notes', icon: FileText },
@@ -32,42 +35,76 @@ const contentTypes: { id: ContentType; label: string; icon: React.ElementType }[
 ];
 
 export const TeacherDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
-  const { contents, addContent } = useContent();
+  const { profile, logout } = useAuth();
+  const { contents, addContent, uploadFile, isLoading: contentLoading } = useContent();
   const [showUpload, setShowUpload] = useState(false);
   const [selectedType, setSelectedType] = useState<ContentType>('pdf');
-  const [targetLevel, setTargetLevel] = useState<TargetLevel>(100);
+  const [targetLevel, setTargetLevel] = useState<TargetLevel>('100');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [textContent, setTextContent] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = () => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
     if (!title.trim()) {
       toast.error('Please enter a title');
       return;
     }
 
-    addContent({
-      title,
-      description,
-      type: selectedType,
-      targetLevel,
-      createdBy: user?.id || '',
-      textContent: selectedType === 'text' || selectedType === 'study_plan' || selectedType === 'announcement' 
-        ? textContent 
-        : undefined,
-    });
+    setIsUploading(true);
 
-    toast.success(`Content uploaded successfully! Notification sent to ${targetLevel === 'all' ? 'all levels' : `Level ${targetLevel}`}`);
-    
-    // Reset form
-    setTitle('');
-    setDescription('');
-    setTextContent('');
-    setShowUpload(false);
+    try {
+      let fileUrl: string | undefined;
+
+      // Upload file if selected
+      if (selectedFile) {
+        const uploadedUrl = await uploadFile(selectedFile, selectedType);
+        if (uploadedUrl) {
+          fileUrl = uploadedUrl;
+        } else {
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      await addContent({
+        title,
+        description: description || undefined,
+        type: selectedType,
+        target_level: targetLevel,
+        file_url: fileUrl,
+        text_content: (selectedType === 'text' || selectedType === 'study_plan' || selectedType === 'announcement') 
+          ? textContent 
+          : undefined,
+      });
+
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setTextContent('');
+      setSelectedFile(null);
+      setShowUpload(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload content');
+    }
+
+    setIsUploading(false);
   };
 
-  const recentUploads = contents.filter(c => c.createdBy === user?.id).slice(0, 5);
+  const myUploads = contents.filter(c => c.created_by === profile?.id).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -77,7 +114,7 @@ export const TeacherDashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-1">
             <div>
               <p className="text-sm opacity-80">Teacher Dashboard</p>
-              <h1 className="text-xl font-semibold">{user?.fullName}</h1>
+              <h1 className="text-xl font-semibold">{profile?.full_name || 'Teacher'}</h1>
             </div>
             <Button variant="ghost" size="icon" onClick={logout} className="text-primary-foreground hover:bg-primary-foreground/10">
               <LogOut className="w-5 h-5" />
@@ -93,15 +130,15 @@ export const TeacherDashboard: React.FC = () => {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-primary">{contents.length}</p>
-                <p className="text-xs text-muted-foreground">Total Uploads</p>
+                <p className="text-xs text-muted-foreground">Total Content</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-info">156</p>
-                <p className="text-xs text-muted-foreground">Students</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-success">3</p>
+                <p className="text-2xl font-bold text-info">3</p>
                 <p className="text-xs text-muted-foreground">Levels</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-success">{myUploads.length}</p>
+                <p className="text-xs text-muted-foreground">My Uploads</p>
               </div>
             </div>
           </CardContent>
@@ -125,7 +162,7 @@ export const TeacherDashboard: React.FC = () => {
               <CardTitle className="text-lg flex items-center justify-between">
                 Upload Content
                 <Button variant="ghost" size="sm" onClick={() => setShowUpload(false)}>
-                  Cancel
+                  <X className="w-4 h-4" />
                 </Button>
               </CardTitle>
             </CardHeader>
@@ -172,7 +209,7 @@ export const TeacherDashboard: React.FC = () => {
               {/* Target Level */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Target Level</label>
-                <Select value={String(targetLevel)} onValueChange={(v) => setTargetLevel(v === 'all' ? 'all' : Number(v) as 100 | 200 | 300)}>
+                <Select value={targetLevel} onValueChange={(v) => setTargetLevel(v as TargetLevel)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
@@ -223,24 +260,69 @@ export const TeacherDashboard: React.FC = () => {
               {(selectedType === 'pdf' || selectedType === 'video' || selectedType === 'audio' || selectedType === 'image') && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">Upload File</label>
-                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedType === 'pdf' && 'PDF files up to 50MB'}
-                      {selectedType === 'video' && 'MP4, MOV up to 500MB'}
-                      {selectedType === 'audio' && 'MP3, WAV up to 100MB'}
-                      {selectedType === 'image' && 'PNG, JPG up to 10MB'}
-                    </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept={
+                      selectedType === 'pdf' ? '.pdf' :
+                      selectedType === 'video' ? 'video/*' :
+                      selectedType === 'audio' ? 'audio/*' :
+                      'image/*'
+                    }
+                    onChange={handleFileSelect}
+                  />
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                  >
+                    {selectedFile ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <span className="text-sm font-medium">{selectedFile.name}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFile(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Click to upload or drag and drop
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {selectedType === 'pdf' && 'PDF files up to 50MB'}
+                          {selectedType === 'video' && 'MP4, MOV up to 500MB'}
+                          {selectedType === 'audio' && 'MP3, WAV up to 100MB'}
+                          {selectedType === 'image' && 'PNG, JPG up to 10MB'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
 
-              <Button variant="gradient" className="w-full" onClick={handleUpload}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload & Notify Students
+              <Button 
+                variant="gradient" 
+                className="w-full" 
+                onClick={handleUpload}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {isUploading ? 'Uploading...' : 'Upload & Notify Students'}
               </Button>
             </CardContent>
           </Card>
@@ -250,12 +332,18 @@ export const TeacherDashboard: React.FC = () => {
       {/* Recent Uploads */}
       <section className="px-4">
         <h2 className="text-lg font-semibold mb-4">Recent Uploads</h2>
-        <div className="space-y-3">
-          {recentUploads.map(item => (
-            <ContentCard key={item.id} content={item} />
-          ))}
-        </div>
-        {recentUploads.length === 0 && (
+        {contentLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {myUploads.map(item => (
+              <ContentCard key={item.id} content={item} />
+            ))}
+          </div>
+        )}
+        {!contentLoading && myUploads.length === 0 && (
           <p className="text-center text-muted-foreground py-8">
             No uploads yet. Start by uploading content above.
           </p>

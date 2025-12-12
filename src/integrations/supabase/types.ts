@@ -14,16 +14,224 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      content: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          file_url: string | null
+          id: string
+          target_level: Database["public"]["Enums"]["target_level"]
+          text_content: string | null
+          thumbnail_url: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          target_level: Database["public"]["Enums"]["target_level"]
+          text_content?: string | null
+          thumbnail_url?: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          target_level?: Database["public"]["Enums"]["target_level"]
+          text_content?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["content_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      favorites: {
+        Row: {
+          content_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          content_id: string | null
+          created_at: string
+          id: string
+          message: string
+          target_level: Database["public"]["Enums"]["target_level"]
+          title: string
+        }
+        Insert: {
+          content_id?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          target_level: Database["public"]["Enums"]["target_level"]
+          title: string
+        }
+        Update: {
+          content_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          target_level?: Database["public"]["Enums"]["target_level"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          level: Database["public"]["Enums"]["student_level"] | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          level?: Database["public"]["Enums"]["student_level"] | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          level?: Database["public"]["Enums"]["student_level"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          notification_id: string
+          read: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notification_id: string
+          read?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notification_id?: string
+          read?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_level: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["student_level"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "teacher"
+      content_type:
+        | "pdf"
+        | "text"
+        | "audio"
+        | "video"
+        | "image"
+        | "study_plan"
+        | "announcement"
+      student_level: "100" | "200" | "300"
+      target_level: "100" | "200" | "300" | "all"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +358,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "teacher"],
+      content_type: [
+        "pdf",
+        "text",
+        "audio",
+        "video",
+        "image",
+        "study_plan",
+        "announcement",
+      ],
+      student_level: ["100", "200", "300"],
+      target_level: ["100", "200", "300", "all"],
+    },
   },
 } as const

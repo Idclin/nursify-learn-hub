@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContent, Content } from '@/contexts/ContentContext';
 import { ContentCard } from '@/components/ContentCard';
+import { ContentViewer } from '@/components/ContentViewer';
+import { NotificationsSheet } from '@/components/NotificationsSheet';
+import { ProfileSheet } from '@/components/ProfileSheet';
 import { LevelBadge } from '@/components/LevelBadge';
 import { Bell, Search, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +13,10 @@ import { Input } from '@/components/ui/input';
 export const StudentHome: React.FC = () => {
   const { profile } = useAuth();
   const { contents, isLoading } = useContent();
+  
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   
   const userLevel = profile?.level || '100';
   
@@ -34,11 +42,20 @@ export const StudentHome: React.FC = () => {
               <h1 className="text-xl font-semibold">{profile?.full_name || 'Student'}</h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative"
+                onClick={() => setNotificationsOpen(true)}
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setProfileOpen(true)}
+              >
                 <User className="w-5 h-5" />
               </Button>
             </div>
@@ -82,7 +99,11 @@ export const StudentHome: React.FC = () => {
         ) : (
           <div className="grid gap-4">
             {recentContent.map(item => (
-              <ContentCard key={item.id} content={item} />
+              <ContentCard 
+                key={item.id} 
+                content={item} 
+                onView={() => setSelectedContent(item)}
+              />
             ))}
           </div>
         )}
@@ -94,6 +115,25 @@ export const StudentHome: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Content Viewer Dialog */}
+      <ContentViewer
+        content={selectedContent}
+        open={!!selectedContent}
+        onClose={() => setSelectedContent(null)}
+      />
+
+      {/* Notifications Sheet */}
+      <NotificationsSheet
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+      />
+
+      {/* Profile Sheet */}
+      <ProfileSheet
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+      />
     </div>
   );
 };

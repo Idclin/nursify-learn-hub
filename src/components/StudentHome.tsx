@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContent, Content } from '@/contexts/ContentContext';
 import { ContentCard } from '@/components/ContentCard';
-import { ContentViewer } from '@/components/ContentViewer';
+import { FullscreenContentViewer } from '@/components/FullscreenContentViewer';
 import { NotificationsSheet } from '@/components/NotificationsSheet';
 import { ProfileSheet } from '@/components/ProfileSheet';
 import { LevelBadge } from '@/components/LevelBadge';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Bell, Search, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { Input } from '@/components/ui/input';
 export const StudentHome: React.FC = () => {
   const { profile } = useAuth();
   const { contents, isLoading } = useContent();
+  const { unreadCount } = useNotifications();
   
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -49,7 +51,11 @@ export const StudentHome: React.FC = () => {
                 onClick={() => setNotificationsOpen(true)}
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Button>
               <Button 
                 variant="ghost" 
@@ -116,8 +122,8 @@ export const StudentHome: React.FC = () => {
         )}
       </section>
 
-      {/* Content Viewer Dialog */}
-      <ContentViewer
+      {/* Fullscreen Content Viewer */}
+      <FullscreenContentViewer
         content={selectedContent}
         open={!!selectedContent}
         onClose={() => setSelectedContent(null)}

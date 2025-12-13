@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useEffect } from 'react';
+import { useNotifications } from '@/hooks/useNotifications';
 import {
   Sheet,
   SheetContent,
@@ -12,14 +11,6 @@ import { Bell, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Database } from '@/integrations/supabase/types';
-
-type NotificationRow = Database['public']['Tables']['notifications']['Row'];
-
-interface NotificationWithRead extends NotificationRow {
-  isRead: boolean;
-  userNotificationId?: string;
-}
 
 interface NotificationsSheetProps {
   open: boolean;
@@ -27,85 +18,13 @@ interface NotificationsSheetProps {
 }
 
 export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ open, onOpenChange }) => {
-  const { user, profile } = useAuth();
-  const [notifications, setNotifications] = useState<NotificationWithRead[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchNotifications = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    try {
-      // Fetch notifications for user's level
-      const { data: notifs, error: notifsError } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (notifsError) throw notifsError;
-
-      // Fetch user's read status
-      const { data: userNotifs, error: userNotifsError } = await supabase
-        .from('user_notifications')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (userNotifsError) throw userNotifsError;
-
-      const readMap = new Map(userNotifs?.map(un => [un.notification_id, { read: un.read, id: un.id }]));
-
-      const mergedNotifs = (notifs || []).map(n => ({
-        ...n,
-        isRead: readMap.get(n.id)?.read || false,
-        userNotificationId: readMap.get(n.id)?.id,
-      }));
-
-      setNotifications(mergedNotifs);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-    setIsLoading(false);
-  };
+  const { notifications, unreadCount, isLoading, markAsRead, refetch } = useNotifications();
 
   useEffect(() => {
-    if (open && user) {
-      fetchNotifications();
+    if (open) {
+      refetch();
     }
-  }, [open, user]);
-
-  const markAsRead = async (notification: NotificationWithRead) => {
-    if (!user || notification.isRead) return;
-
-    try {
-      if (notification.userNotificationId) {
-        // Update existing record
-        await supabase
-          .from('user_notifications')
-          .update({ read: true })
-          .eq('id', notification.userNotificationId);
-      } else {
-        // Create new record
-        await supabase
-          .from('user_notifications')
-          .insert({
-            user_id: user.id,
-            notification_id: notification.id,
-            read: true,
-          });
-      }
-
-      setNotifications(prev =>
-        prev.map(n =>
-          n.id === notification.id ? { ...n, isRead: true } : n
-        )
-      );
-    } catch (error) {
-      console.error('Error marking as read:', error);
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  }, [open, refetch]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -125,7 +44,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({ open, on
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-6 space-y-3 overflow-y-auto max-h-[calc(100vh-150px)]">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />

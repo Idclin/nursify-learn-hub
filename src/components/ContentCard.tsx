@@ -1,7 +1,7 @@
 import { Content } from '@/contexts/ContentContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LevelBadge } from '@/components/LevelBadge';
-import { FileText, Video, Music, Image, Calendar, Megaphone, Download, Heart } from 'lucide-react';
+import { FileText, Video, Music, Image, Calendar, Megaphone, Download, Heart, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -9,6 +9,8 @@ import { formatDistanceToNow } from 'date-fns';
 interface ContentCardProps {
   content: Content;
   onView?: () => void;
+  onDelete?: () => void;
+  showDelete?: boolean;
 }
 
 const contentTypeConfig = {
@@ -21,7 +23,7 @@ const contentTypeConfig = {
   announcement: { icon: Megaphone, color: 'text-warning', bgColor: 'bg-warning/10' },
 };
 
-export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => {
+export const ContentCard: React.FC<ContentCardProps> = ({ content, onView, onDelete, showDelete }) => {
   const config = contentTypeConfig[content.type];
   const Icon = config.icon;
 
@@ -97,6 +99,19 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onView }) => 
             >
               <Download className="w-4 h-4 mr-1" />
               Download
+            </Button>
+          )}
+          {showDelete && onDelete && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
             </Button>
           )}
           <Button variant="ghost" size="icon" className="shrink-0" onClick={(e) => e.stopPropagation()}>

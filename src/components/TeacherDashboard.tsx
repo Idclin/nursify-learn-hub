@@ -36,7 +36,7 @@ const contentTypes: { id: ContentType; label: string; icon: React.ElementType }[
 
 export const TeacherDashboard: React.FC = () => {
   const { profile, logout } = useAuth();
-  const { contents, addContent, uploadFile, isLoading: contentLoading } = useContent();
+  const { contents, addContent, uploadFile, deleteContent, isLoading: contentLoading } = useContent();
   const [showUpload, setShowUpload] = useState(false);
   const [selectedType, setSelectedType] = useState<ContentType>('pdf');
   const [targetLevel, setTargetLevel] = useState<TargetLevel>('100');
@@ -339,7 +339,12 @@ export const TeacherDashboard: React.FC = () => {
         ) : (
           <div className="space-y-3">
             {myUploads.map(item => (
-              <ContentCard key={item.id} content={item} />
+              <ContentCard 
+                key={item.id} 
+                content={item} 
+                showDelete 
+                onDelete={() => deleteContent(item.id)} 
+              />
             ))}
           </div>
         )}

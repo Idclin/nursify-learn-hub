@@ -51,9 +51,13 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     setShowDeleteDialog(true);
   };
 
-  const handleConfirmDelete = () => {
-    onDelete?.();
+  const handleConfirmDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setShowDeleteDialog(false);
+    if (onDelete) {
+      onDelete();
+    }
   };
 
   return (
@@ -166,7 +170,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

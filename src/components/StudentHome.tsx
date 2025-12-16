@@ -36,23 +36,23 @@ export const StudentHome: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="gradient-hero sticky top-0 z-40 safe-top">
+      <header className="gradient-hero sticky top-0 z-40 safe-top animate-fade-in">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between mb-4">
-            <div>
+            <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
               <p className="text-sm text-muted-foreground">Welcome back,</p>
               <h1 className="text-xl font-semibold">{profile?.full_name || 'Student'}</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 animate-slide-up" style={{ animationDelay: '150ms' }}>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="relative"
+                className="relative transition-transform duration-200 hover:scale-110"
                 onClick={() => setNotificationsOpen(true)}
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -60,6 +60,7 @@ export const StudentHome: React.FC = () => {
               <Button 
                 variant="ghost" 
                 size="icon"
+                className="transition-transform duration-200 hover:scale-110"
                 onClick={() => setProfileOpen(true)}
               >
                 <User className="w-5 h-5" />
@@ -67,16 +68,16 @@ export const StudentHome: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4 animate-slide-up" style={{ animationDelay: '200ms' }}>
             <LevelBadge level={userLevel} className="text-sm px-3 py-1" />
             <span className="text-sm text-muted-foreground">Nursing Program</span>
           </div>
 
-          <div className="relative">
+          <div className="relative animate-slide-up" style={{ animationDelay: '250ms' }}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               placeholder="Search notes, videos, lessons..."
-              className="pl-10 bg-card/80 backdrop-blur-sm"
+              className="pl-10 bg-card/80 backdrop-blur-sm transition-shadow duration-200 focus:shadow-lg"
             />
           </div>
         </div>
@@ -85,17 +86,17 @@ export const StudentHome: React.FC = () => {
       {/* Quick Stats */}
       <section className="px-4 py-6">
         <div className="grid grid-cols-3 gap-3">
-          <QuickStatCard label="Notes" count={noteCount} color="bg-info/10 text-info" />
-          <QuickStatCard label="Videos" count={videoCount} color="bg-purple-500/10 text-purple-600" />
-          <QuickStatCard label="Audio" count={audioCount} color="bg-success/10 text-success" />
+          <QuickStatCard label="Notes" count={noteCount} color="bg-info/10 text-info" delay={300} />
+          <QuickStatCard label="Videos" count={videoCount} color="bg-purple-500/10 text-purple-600" delay={350} />
+          <QuickStatCard label="Audio" count={audioCount} color="bg-success/10 text-success" delay={400} />
         </div>
       </section>
 
       {/* Recent Content */}
       <section className="px-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 animate-slide-up" style={{ animationDelay: '450ms' }}>
           <h2 className="text-lg font-semibold">Recent Updates</h2>
-          <Button variant="link" className="text-sm p-0 h-auto">View all</Button>
+          <Button variant="link" className="text-sm p-0 h-auto hover:scale-105 transition-transform">View all</Button>
         </div>
 
         {isLoading ? (
@@ -104,18 +105,19 @@ export const StudentHome: React.FC = () => {
           </div>
         ) : (
           <div className="grid gap-4">
-            {recentContent.map(item => (
+            {recentContent.map((item, index) => (
               <ContentCard 
                 key={item.id} 
                 content={item} 
                 onView={() => setSelectedContent(item)}
+                animationDelay={500 + index * 50}
               />
             ))}
           </div>
         )}
 
         {!isLoading && recentContent.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-12 animate-fade-in">
             <p className="text-muted-foreground">No content available for your level yet.</p>
             <p className="text-sm text-muted-foreground mt-1">Check back soon for updates!</p>
           </div>
@@ -148,10 +150,14 @@ interface QuickStatCardProps {
   label: string;
   count: number;
   color: string;
+  delay?: number;
 }
 
-const QuickStatCard: React.FC<QuickStatCardProps> = ({ label, count, color }) => (
-  <div className="bg-card rounded-xl p-4 text-center shadow-sm border">
+const QuickStatCard: React.FC<QuickStatCardProps> = ({ label, count, color, delay = 0 }) => (
+  <div 
+    className="bg-card rounded-xl p-4 text-center shadow-sm border animate-slide-up hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
+    style={{ animationDelay: `${delay}ms` }}
+  >
     <p className={`text-2xl font-bold ${color.split(' ')[1]}`}>{count}</p>
     <p className="text-xs text-muted-foreground mt-1">{label}</p>
   </div>

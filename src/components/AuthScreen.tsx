@@ -95,16 +95,16 @@ export const AuthScreen: React.FC = () => {
     <div className="min-h-screen gradient-hero flex flex-col">
       {/* Logo Section */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 pt-12">
-        <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-glow mb-4">
+        <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-glow mb-4 animate-scale-in hover:scale-110 transition-transform duration-300">
           <Stethoscope className="w-10 h-10 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl font-bold text-center">NurseLearn</h1>
-        <p className="text-muted-foreground text-center mt-1">Your Nursing Education Hub</p>
+        <h1 className="text-2xl font-bold text-center animate-slide-up" style={{ animationDelay: '100ms' }}>NurseLearn</h1>
+        <p className="text-muted-foreground text-center mt-1 animate-slide-up" style={{ animationDelay: '150ms' }}>Your Nursing Education Hub</p>
       </div>
 
       {/* Auth Form */}
       <div className="p-4 pb-8">
-        <Card className="shadow-lg">
+        <Card className="shadow-lg animate-slide-up" style={{ animationDelay: '200ms' }}>
           <CardHeader className="text-center pb-4">
             <CardTitle>
               {mode === 'login' && 'Welcome Back'}
@@ -236,7 +236,8 @@ export const AuthScreen: React.FC = () => {
                 <button
                   onClick={() => handleRoleSelect('student')}
                   disabled={isLoading}
-                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-4 disabled:opacity-50"
+                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all duration-300 flex items-center gap-4 disabled:opacity-50 animate-slide-up hover:-translate-y-1 hover:shadow-md"
+                  style={{ animationDelay: '50ms' }}
                 >
                   <div className="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center">
                     <GraduationCap className="w-6 h-6 text-info" />
@@ -251,7 +252,8 @@ export const AuthScreen: React.FC = () => {
                 <button
                   onClick={() => handleRoleSelect('teacher')}
                   disabled={isLoading}
-                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-4 disabled:opacity-50"
+                  className="w-full p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all duration-300 flex items-center gap-4 disabled:opacity-50 animate-slide-up hover:-translate-y-1 hover:shadow-md"
+                  style={{ animationDelay: '100ms' }}
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                     <BookOpen className="w-6 h-6 text-primary" />
@@ -267,7 +269,7 @@ export const AuthScreen: React.FC = () => {
                   )}
                 </button>
 
-                <Button variant="ghost" className="w-full" onClick={() => setMode('register')}>
+                <Button variant="ghost" className="w-full animate-fade-in" style={{ animationDelay: '150ms' }} onClick={() => setMode('register')}>
                   Back
                 </Button>
               </div>
@@ -275,15 +277,16 @@ export const AuthScreen: React.FC = () => {
 
             {mode === 'level-select' && (
               <div className="space-y-3">
-                {(['100', '200', '300'] as const).map((level) => (
+                {(['100', '200', '300'] as const).map((level, index) => (
                   <button
                     key={level}
                     onClick={() => handleLevelSelect(level)}
                     disabled={isLoading}
                     className={cn(
-                      'w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between disabled:opacity-50',
+                      'w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between disabled:opacity-50 animate-slide-up hover:-translate-y-1 hover:shadow-md',
                       'border-border hover:border-primary hover:bg-primary/5'
                     )}
+                    style={{ animationDelay: `${50 + index * 50}ms` }}
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
@@ -311,7 +314,7 @@ export const AuthScreen: React.FC = () => {
                   </button>
                 ))}
 
-                <Button variant="ghost" className="w-full" onClick={() => setMode('role-select')}>
+                <Button variant="ghost" className="w-full animate-fade-in" style={{ animationDelay: '200ms' }} onClick={() => setMode('role-select')}>
                   Back
                 </Button>
               </div>

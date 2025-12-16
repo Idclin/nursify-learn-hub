@@ -109,14 +109,20 @@ export const TeacherDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="gradient-primary text-primary-foreground sticky top-0 z-40 safe-top">
+      <header className="gradient-primary text-primary-foreground sticky top-0 z-40 safe-top animate-fade-in">
         <div className="px-4 py-5">
           <div className="flex items-center justify-between mb-1">
-            <div>
+            <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
               <p className="text-sm opacity-80">Teacher Dashboard</p>
               <h1 className="text-xl font-semibold">{profile?.full_name || 'Teacher'}</h1>
             </div>
-            <Button variant="ghost" size="icon" onClick={logout} className="text-primary-foreground hover:bg-primary-foreground/10">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={logout} 
+              className="text-primary-foreground hover:bg-primary-foreground/10 transition-transform duration-200 hover:scale-110 animate-slide-up"
+              style={{ animationDelay: '150ms' }}
+            >
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
@@ -125,18 +131,18 @@ export const TeacherDashboard: React.FC = () => {
 
       {/* Quick Stats */}
       <section className="px-4 -mt-4">
-        <Card className="shadow-lg">
+        <Card className="shadow-lg animate-slide-up" style={{ animationDelay: '200ms' }}>
           <CardContent className="p-4">
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
+              <div className="animate-scale-in" style={{ animationDelay: '250ms' }}>
                 <p className="text-2xl font-bold text-primary">{contents.length}</p>
                 <p className="text-xs text-muted-foreground">Total Content</p>
               </div>
-              <div>
+              <div className="animate-scale-in" style={{ animationDelay: '300ms' }}>
                 <p className="text-2xl font-bold text-info">3</p>
                 <p className="text-xs text-muted-foreground">Levels</p>
               </div>
-              <div>
+              <div className="animate-scale-in" style={{ animationDelay: '350ms' }}>
                 <p className="text-2xl font-bold text-success">{myUploads.length}</p>
                 <p className="text-xs text-muted-foreground">My Uploads</p>
               </div>
@@ -150,7 +156,8 @@ export const TeacherDashboard: React.FC = () => {
         {!showUpload ? (
           <Button 
             variant="gradient" 
-            className="w-full h-14 text-base"
+            className="w-full h-14 text-base animate-slide-up hover:scale-[1.02] transition-transform duration-300"
+            style={{ animationDelay: '400ms' }}
             onClick={() => setShowUpload(true)}
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -331,25 +338,26 @@ export const TeacherDashboard: React.FC = () => {
 
       {/* Recent Uploads */}
       <section className="px-4">
-        <h2 className="text-lg font-semibold mb-4">Recent Uploads</h2>
+        <h2 className="text-lg font-semibold mb-4 animate-slide-up" style={{ animationDelay: '450ms' }}>Recent Uploads</h2>
         {contentLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : (
           <div className="space-y-3">
-            {myUploads.map(item => (
+            {myUploads.map((item, index) => (
               <ContentCard 
                 key={item.id} 
                 content={item} 
                 showDelete 
-                onDelete={() => deleteContent(item.id)} 
+                onDelete={() => deleteContent(item.id)}
+                animationDelay={500 + index * 50}
               />
             ))}
           </div>
         )}
         {!contentLoading && myUploads.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">
+          <p className="text-center text-muted-foreground py-8 animate-fade-in" style={{ animationDelay: '500ms' }}>
             No uploads yet. Start by uploading content above.
           </p>
         )}

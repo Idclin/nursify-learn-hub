@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Content } from '@/contexts/ContentContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LevelBadge } from '@/components/LevelBadge';
-import { FileText, Video, Music, Image, Calendar, Megaphone, Download, Heart, Trash2 } from 'lucide-react';
+import { FileText, Video, Music, Image, Calendar, Megaphone, Download, Heart, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -20,7 +20,7 @@ import {
 interface ContentCardProps {
   content: Content;
   onView?: () => void;
-  onDelete?: () => void;
+  onDelete?: () => Promise<void>;
   showDelete?: boolean;
   animationDelay?: number;
 }
@@ -43,6 +43,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   animationDelay = 0 
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const config = contentTypeConfig[content.type];
   const Icon = config.icon;
 
@@ -51,12 +52,17 @@ export const ContentCard: React.FC<ContentCardProps> = ({
     setShowDeleteDialog(true);
   };
 
-  const handleConfirmDelete = (e: React.MouseEvent) => {
+  const handleConfirmDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setShowDeleteDialog(false);
     if (onDelete) {
-      onDelete();
+      setIsDeleting(true);
+      try {
+        await onDelete();
+      } finally {
+        setIsDeleting(false);
+        setShowDeleteDialog(false);
+      }
     }
   };
 
@@ -161,7 +167,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
         </CardContent>
       </Card>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => !isDeleting && setShowDeleteDialog(open)}>
         <AlertDialogContent className="animate-scale-in">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Content</AlertDialogTitle>
@@ -170,12 +176,22 @@ export const ContentCard: React.FC<ContentCardProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()} disabled={isDeleting}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

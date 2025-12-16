@@ -33,6 +33,7 @@ interface ContentContextType {
     text_content?: string;
     thumbnail_url?: string;
   }) => Promise<void>;
+  deleteContent: (contentId: string) => Promise<void>;
   uploadFile: (file: File, folder: string) => Promise<string | null>;
   refreshContent: () => Promise<void>;
 }
@@ -164,12 +165,38 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const deleteContent = async (contentId: string) => {
+    if (!user) {
+      toast.error('You must be logged in');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('content')
+        .delete()
+        .eq('id', contentId);
+
+      if (error) {
+        console.error('Error deleting content:', error);
+        toast.error('Failed to delete content');
+        return;
+      }
+
+      setContents(prev => prev.filter(c => c.id !== contentId));
+      toast.success('Content deleted successfully');
+    } catch (error) {
+      console.error('Error in deleteContent:', error);
+      toast.error('Failed to delete content');
+    }
+  };
+
   const refreshContent = async () => {
     await fetchContent();
   };
 
   return (
-    <ContentContext.Provider value={{ contents, isLoading, addContent, uploadFile, refreshContent }}>
+    <ContentContext.Provider value={{ contents, isLoading, addContent, deleteContent, uploadFile, refreshContent }}>
       {children}
     </ContentContext.Provider>
   );
